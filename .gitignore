@@ -1,1 +1,4 @@
 obj/*
+*.conflicts
+*.cmi
+*.cmo
