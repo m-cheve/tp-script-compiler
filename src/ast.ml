@@ -53,11 +53,9 @@ type type_ =
     |Cte of cte (* par exemple 42 est un type dont le seul élément est 42 *)
     |PrimitiveType of primType (* number, boolean ou string *)
     |Array of type_ (* t[] (t = type)*)
-    |Any
-    |Object of objectContent list (* {i1: t1, ..., in: tn} (t en option) (séparation : ',' ou ';')*)
+    |Any (* TODO : voir comment fonctionne Any *)
+    |Object of (id * type_ option) list (* {i1: t1, ..., in: tn} (t en option) (séparation : ',' ou ';'), tn en option*)
     |Union of type_ list (* t1 | ... | tn  ( toute valeur qui possède un de ces types est aussi typable par l’union)*)
-and objectContent =
-    id * type_ option (* i: t ou i *)
 
 type instruction =
     |Empty (* ; *)
