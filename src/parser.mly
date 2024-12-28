@@ -60,6 +60,7 @@
 
 file:
     body_list EOF { $1 }
+  | error { raise (Ast.SyntaxError "Syntax error") }
 
 body_list:
   | body { [$1] }
@@ -111,7 +112,6 @@ type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union
   | type__ LBracket RBracket { Array $1 }
   | Any { Any } /* TODO : voir comment fonctionne Any */
   | LBrace objectType_list RBrace { Object $2 }
-
 
 objectType_list:
   | objectType { [$1] }
