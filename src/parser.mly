@@ -16,21 +16,30 @@
 %token Let Const Equals Type Var Any EOF
 %token Pow Mult Div Add Sub
 %token Blt Ble Gt Ge Eq Diff StrictEq StrictDiff And Or
-%token Semicolon  LPar RPar Colon LBrace RBrace LBracket RBracket Pipe Comma Dot
+%token Semicolon LPar RPar Colon LBrace RBrace LBracket RBracket Pipe Comma Dot
 %token If While Return Else
 
 %left Or And
-%left Eq Diff StrictEq StrictDiff
+%left Eq Diff StrictEq StrictDiff Equals
 %left Blt Ble Gt Ge
 %left Add Sub
 %left Mult Div
 %right Pow
+%right LPar
+%left Dot LBracket
+
+%nonassoc RPar
+%nonassoc Else
+
+%nonassoc LowerThanBop
+%nonassoc LowerThanAssign
 
 %start file
 %type <Ast.file> file
 %type <Ast.declaration> declaration
 %type <Ast.instruction> instruction
 %type <Ast.type_> type_ type__
+%type <Ast.type_ list> type_union
 %type <Ast.unaire> uop
 %type <Ast.bop> bop
 %type <Ast.expression> expression
@@ -46,7 +55,6 @@
 %type <Ast.body list> body_list
 %type <Ast.body> body
 %type <Ast.expression list> expression_list
-%type <Ast.type_ list> type_union
 
 %%
 
@@ -70,7 +78,7 @@ declaration:
 
 binding_list:
   | binding { [$1] }
-  | binding Comma binding_list { $2 @ [$1] }
+  | binding Comma binding_list { $3 @ [$1] }
 
 binding:
   | Id Colon type_ Equals expression { Binding ($1, Some $3, Some $5) }
@@ -84,7 +92,7 @@ instruction:
   | LBrace body_list RBrace { Block $2 }
   | Var binding_list { VarDeclaration $2 }
   | If LPar expression RPar instruction Else instruction { If ($3, $5, Some $7) }
-  | If LPar expression RPar instruction { If ($3, $5, None) %prec Or } (* %prec Or pour résoudre le conflit de priorité *)
+  | If LPar expression RPar instruction { If ($3, $5, None) }
   | While LPar expression RPar instruction { While ($3, $5) }
   | Return expression Semicolon { Return (Some $2) }
   | Return Semicolon { Return None }
@@ -94,15 +102,14 @@ type_:
   | type_union { Union $1 }
 
 type_union:
-  | type__ Pipe type_union { $3 @ [$1] }
-  | type__ { [$1] }
+  | type__ Pipe type_union { $1::$3 }
 
-type__: (* Utilisé pour résoudre le problème de grammaire cyclique avec Union *)
-  | Id Colon type__ { IdT $1 }
+type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union */
+  | Id { IdT $1 }
   | Cte { Cte $1 }
   | primType { PrimitiveType $1 }
   | type__ LBracket RBracket { Array $1 }
-  | Any { Any } (* TODO : voir comment fonctionne Any *)
+  | Any { Any } /* TODO : voir comment fonctionne Any */
   | LBrace objectType_list RBrace { Object $2 }
 
 
@@ -149,15 +156,15 @@ expression:
   | LBrace objectContent_list RBrace { Object $2 }
   | LBracket expression_list RBracket { Array $2 }
   | expression LPar expression_list RPar { Function ($1, $3) }
-  | uop expression { Unaire ($1, $2) }
-  | expression bop expression { Bop ($1, $2, $3) }
-  | expression cond expression { Cond ($1, $2, $3) }
+  | uop expression { Unaire ($1, $2) } %prec LowerThanAssign
+  | expression bop expression { Bop ($1, $2, $3) } %prec LowerThanBop
+  | expression cond expression { Cond ($1, $2, $3) } %prec LowerThanBop
   | expression And expression { And ($1, $3) }
   | expression Or expression { Or ($1, $3) }
-  | left_member Equals expression { Affectation ($1, $3) }
+  | left_member Equals expression { Affectation ($1, $3) } %prec LowerThanAssign
 
 left_member:
-  | Id { IdLM $1 }
+  | Id { IdLM $1 } %prec LPar
   | expression LBracket expression RBracket { Table ($1, $3) }
   | expression Dot Id { SubElement ($1, $3) }
 
