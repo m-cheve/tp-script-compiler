@@ -10,9 +10,9 @@
 %token <string> Hexa
 %token <string> FloatDecimal
 %token <bool> Boolean
-%token <Ast.unaire> Typeof Plus Minus
+%token UTypeof Plus Minus
 %token <Ast.cte> Cte
-%token <Ast.primType> Number BooleanType StringType
+%token Number BooleanType StringType
 %token Let Const Equals Type Var Any EOF
 %token Pow Mult Div Add Sub
 %token Blt Ble Gt Ge Eq Diff StrictEq StrictDiff And Or
@@ -128,7 +128,7 @@ primType:
   | StringType { String }
 
 uop:
-  | Typeof { Typeof }
+  | UTypeof { UTypeof }
   | Plus { Plus }
   | Minus { Minus }
 

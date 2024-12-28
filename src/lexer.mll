@@ -18,7 +18,7 @@ rule token = parse
       | "else" -> Else
       | "while" -> While
       | "return" -> Return
-      | "typeof" -> Typeof
+      | "typeof" -> UTypeof
       | "true" -> Boolean true
       | "false" -> Boolean false
       | "number" -> Number

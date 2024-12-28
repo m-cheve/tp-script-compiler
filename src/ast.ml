@@ -13,8 +13,8 @@ type cte =
 
 type id = string
 
-type unaire=
-    |Typeof |Plus |Minus
+type unaire =
+    |UTypeof |Plus |Minus
 
 type bop =
     |Pow |Mult |Div
