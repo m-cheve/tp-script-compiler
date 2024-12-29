@@ -1,0 +1,4 @@
+Les fichiers dans OK doivent passer.
+
+Les fichiers dans KO doivent donner une erreur
+(de syntaxe, de portée ou de type).

@@ -1,0 +1,12 @@
+var x : 2;
+let y : true;
+var z : "coucou";
+var x1 : number;
+let x2 : boolean;
+var x3 : string;
+var x4 : number[];
+let x5 : boolean[][];
+let x6 : any;
+let x7 : { x : number; y, z : string };
+let x8 : number | "error";
+let x9 : string | boolean | number[];
