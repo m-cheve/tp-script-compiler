@@ -4,3 +4,7 @@ bin/*
 *.cmi
 *.cmo
 test.ts
+*parser.ml
+*parser.mli
+*lexer.ml
+*lexer.mli
