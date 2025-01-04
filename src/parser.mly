@@ -27,6 +27,7 @@
 %right Pow
 %right LPar
 %left Dot LBracket
+%left Pipe
 
 %nonassoc RPar
 %nonassoc Else
@@ -104,6 +105,7 @@ type_:
 
 type_union:
   | type__ Pipe type_union { $1::$3 }
+  | type__ Pipe type__ { $1::[$3] }
 
 type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union */
   | Id { IdT $1 }
@@ -112,6 +114,12 @@ type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union
   | type__ LBracket RBracket { Array $1 }
   | Any { Any } /* TODO : voir comment fonctionne Any */
   | LBrace objectType_list RBrace { Object $2 }
+  | Decimal { Cte (Decimal $1) }
+  | Binary { Cte (Binary $1) }
+  | Octal { Cte (Octal $1) }
+  | Hexa { Cte (Hexa $1) }
+  | FloatDecimal { Cte (FloatDecimal $1) }
+  | Boolean { Cte (Boolean $1) }
 
 objectType_list:
   | objectType { [$1] }
