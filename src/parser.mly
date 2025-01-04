@@ -120,6 +120,7 @@ type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union
   | Hexa { Cte (Hexa $1) }
   | FloatDecimal { Cte (FloatDecimal $1) }
   | Boolean { Cte (Boolean $1) }
+  | String { Cte (String $1) }
 
 objectType_list:
   | objectType { [$1] }
