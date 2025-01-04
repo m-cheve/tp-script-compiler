@@ -3,3 +3,4 @@ bin/*
 *.conflicts
 *.cmi
 *.cmo
+test.ts
