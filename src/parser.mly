@@ -43,7 +43,6 @@
 %type <Ast.type_> type_ type__
 %type <Ast.type_ list> type_union
 %type <Ast.unaire> uop
-%type <Ast.bop> bop
 %type <Ast.expression> expression
 %type <Ast.cond> cond
 %type <Ast.primType> primType
@@ -143,13 +142,6 @@ uop:
   | Plus { Plus }
   | Minus { Minus }
 
-bop:
-  | Pow { Pow }
-  | Mult { Mult }
-  | Div { Div }
-  | Add { Add }
-  | Sub { Sub }
-
 cond:
   | Blt { Blt }
   | Ble { Ble }
@@ -168,7 +160,11 @@ expression:
   | LBracket expression_list RBracket { Array $2 }
   | expression LPar expression_list RPar { Function ($1, $3) }
   | uop expression { Unaire ($1, $2) } %prec LowerThanAssign
-  | expression bop expression { Bop ($1, $2, $3) } %prec LowerThanBop
+  | expression Plus expression { Bop ($1, Add, $3) }
+  | expression Minus expression { Bop ($1, Sub, $3) }
+  | expression Mult expression { Bop ($1, Mult, $3) }
+  | expression Div expression { Bop ($1, Div, $3) }
+  | expression Pow expression { Bop ($1, Pow, $3) }
   | expression cond expression { Cond ($1, $2, $3) } %prec LowerThanBop
   | expression And expression { And ($1, $3) }
   | expression Or expression { Or ($1, $3) }
