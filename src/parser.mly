@@ -66,6 +66,7 @@ file:
 body_list:
   | body { [$1] }
   | body body_list { $2 @ [$1] }
+  | /* Ajout d'une règle pour gérer la liste vide */ { [] }
 
 body:
   | declaration { Declaration $1 }
@@ -127,6 +128,7 @@ objectType_list:
   | objectType { [$1] }
   | objectType Semicolon objectType_list { $3 @ [$1] }
   | objectType Comma objectType_list { $3 @ [$1] }
+  | /* Ajout d'une règle pour gérer la liste vide */ { [] }
 
 objectType:
   | Id Colon type_ { ($1, Some $3) }
