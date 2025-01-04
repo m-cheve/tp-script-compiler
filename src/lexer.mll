@@ -85,7 +85,7 @@ and comment = parse
 
 and double_quote_string acc = parse
   | "\"" { acc }  (* Fin de la chaîne de caractères, retourne l'accumulateur *)
-  | "\\\"" as c { double_quote_string (acc ^ c) lexbuf }  (* ajoute les guillemets et continue à accumuler *)
+  | "\\\"" as c { double_quote_string (acc ^ c) lexbuf }  (* Ajoute les guillemets et continue à accumuler *)
   | _ as c { double_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumule les caractères autres que les guillemets *)
   | eof { raise (LexerError "Unclosed string") }  (* Si la chaîne n'est pas fermée avant la fin du fichier *)
 
