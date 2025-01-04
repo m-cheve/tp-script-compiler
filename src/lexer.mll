@@ -11,6 +11,7 @@ rule token = parse
   | "/*" { comment lexbuf }  (* Commentaires bloc *)
   | ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as id {
       match id with
+      | "function" -> FunctionToken
       | "var" -> Var
       | "let" -> Let
       | "const" -> Const

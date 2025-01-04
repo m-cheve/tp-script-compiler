@@ -18,6 +18,7 @@
 %token Blt Ble Gt Ge Eq Diff StrictEq StrictDiff And Or
 %token Semicolon LPar RPar Colon LBrace RBrace LBracket RBracket Pipe Comma Dot
 %token If While Return Else
+%token FunctionToken
 
 %left Or And
 %left Eq Diff StrictEq StrictDiff Equals
@@ -75,8 +76,8 @@ declaration:
   | Type Id Equals type_ Semicolon { Alias ($2, $4) }
   | Let binding_list Semicolon { LocalLet $2 }
   | Const binding_list Semicolon { LocalConst $2 }
-  | Id LPar binding_list RPar Colon type_ LBrace body_list RBrace { Function ($1, $3, Some $6, $8)}
-  | Id LPar binding_list RPar LBrace body_list RBrace { Function ($1, $3, None, $6) }
+  | FunctionToken Id LPar binding_list RPar Colon type_ LBrace body_list RBrace { Function ($2, $4, Some $7, $9)}
+  | FunctionToken Id LPar binding_list RPar LBrace body_list RBrace { Function ($2, $4, None, $7) }
 
 binding_list:
   | binding { [$1] }
