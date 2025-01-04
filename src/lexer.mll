@@ -46,12 +46,8 @@ rule token = parse
   | ['0'-'9']+ ('_'? ['0'-'9']+)* ['e' 'E'] ['+' '-']? ['0'-'9']+ ('_'? ['0'-'9']+)* as num {
       FloatDecimal num
     }
-  | "\"" ([^ '"' '\\'] | '\\' '.')* "\"" as s {
-      String (String.sub s 1 (String.length s - 2))
-    }
-  | "'" ([^ '\'' '\\'] | '\\' '.')* "'" as s {
-      String (String.sub s 1 (String.length s - 2))
-    }
+  | "\"" { String (double_quote_string "" lexbuf) }  (* Début d'une chaîne de caractères, on commence avec une chaîne vide *)
+  | "'" { String (single_quote_string "" lexbuf) }  (* Début d'une chaîne de caractères, on commence avec une chaîne vide *)
   | "==" { Eq }
   | "!=" { Diff }
   | "===" { StrictEq }
@@ -86,6 +82,18 @@ and comment = parse
   | "*/" { token lexbuf }  (* Fin du commentaire *)
   | _ { comment lexbuf }   (* Continuer à consommer *)
   | eof { raise (LexerError "Unclosed comment") }
+
+and double_quote_string acc = parse
+  | "\"" { acc }  (* Fin de la chaîne de caractères, retourne l'accumulateur *)
+  | "\\\"" as c { double_quote_string (acc ^ c) lexbuf }  (* ajoute les guillemets et continue à accumuler *)
+  | _ as c { double_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumule les caractères autres que les guillemets *)
+  | eof { raise (LexerError "Unclosed string") }  (* Si la chaîne n'est pas fermée avant la fin du fichier *)
+
+and single_quote_string acc = parse
+  | "'" { acc }  (* Fin de la chaîne, retourne l'accumulateur *)
+  | "\\'" as c { single_quote_string (acc ^ c) lexbuf }  (* Ajoute l'apostrophe et continue à accumuler *)
+  | _ as c { single_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumule les caractères valides *)
+  | eof { raise (LexerError "Unclosed single-quoted string") }  (* Si la chaîne n'est pas fermée avant la fin du fichier *)
 
 {
   let from_channel = Lexing.from_channel
