@@ -82,6 +82,7 @@ declaration:
 binding_list:
   | binding { [$1] }
   | binding Comma binding_list { $3 @ [$1] }
+  | /* Ajout d'une règle pour gérer la liste vide */ { [] }
 
 binding:
   | Id Colon type_ Equals expression { Binding ($1, Some $3, Some $5) }
