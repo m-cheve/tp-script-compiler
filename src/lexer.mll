@@ -6,6 +6,7 @@
 
 rule token = parse
   | [' ' '\t' '\n' '\r'] { token lexbuf }  (* Ignorer les espaces blancs *)
+  | "//"  [^ '\n']* eof { token lexbuf }  (* Commentaires ligne en fin de fichier *)
   | "//" [^ '\n']* '\n' { token lexbuf }  (* Commentaires ligne *)
   | "/*" { comment lexbuf }  (* Commentaires bloc *)
   | ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as id {
