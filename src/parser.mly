@@ -114,7 +114,7 @@ type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union
   | Cte { Cte $1 }
   | primType { PrimitiveType $1 }
   | type__ LBracket RBracket { Array $1 }
-  | Any { Any } /* TODO : voir comment fonctionne Any */
+  | Any { Any }
   | LBrace objectType_list RBrace { Object $2 }
   | Decimal { Cte (Decimal $1) }
   | Binary { Cte (Binary $1) }
