@@ -14,7 +14,7 @@
 %token <Ast.cte> Cte
 %token Number BooleanType StringType
 %token Let Const Equals Type Var Any EOF
-%token Pow Mult Div Add Sub
+%token Pow Mult Div
 %token Blt Ble Gt Ge Eq Diff StrictEq StrictDiff And Or
 %token Semicolon LPar RPar Colon LBrace RBrace LBracket RBracket Pipe Comma Dot
 %token If While Return Else
@@ -23,8 +23,7 @@
 %left Or And
 %left Eq Diff StrictEq StrictDiff Equals
 %left Blt Ble Gt Ge
-%left Add Sub
-%left Mult Div
+%left Mult Div Plus Minus
 %right Pow
 %right LPar
 %left Dot LBracket
@@ -51,7 +50,7 @@
 %type <(Ast.id * Ast.type_ option) list> objectType_list
 %type <Ast.id * Ast.type_ option> objectType
 %type <(Ast.id * Ast.expression) list> objectContent_list
-%type <Ast.binding list> binding_list
+%type <Ast.binding list> non_empty_binding_list binding_list
 %type <Ast.binding> binding
 %type <Ast.body list> body_list
 %type <Ast.body> body
@@ -64,9 +63,8 @@ file:
   | error { raise (Ast.SyntaxError "Syntax error") }
 
 body_list:
-  | body { [$1] }
-  | body body_list { $2 @ [$1] }
-  | /* Ajout d'une règle pour gérer la liste vide */ { [] }
+  | body body_list { [$1] @ $2 }
+  | /* Cas vide */ { [] }
 
 body:
   | declaration { Declaration $1 }
@@ -74,15 +72,18 @@ body:
 
 declaration:
   | Type Id Equals type_ Semicolon { Alias ($2, $4) }
-  | Let binding_list Semicolon { LocalLet $2 }
-  | Const binding_list Semicolon { LocalConst $2 }
+  | Let non_empty_binding_list Semicolon { LocalLet $2 }
+  | Const non_empty_binding_list Semicolon { LocalConst $2 }
   | FunctionToken Id LPar binding_list RPar Colon type_ LBrace body_list RBrace { Function ($2, $4, Some $7, $9)}
   | FunctionToken Id LPar binding_list RPar LBrace body_list RBrace { Function ($2, $4, None, $7) }
 
 binding_list:
+  | non_empty_binding_list { $1 }
+  | /* Cas vide */ { [] }
+
+non_empty_binding_list:
   | binding { [$1] }
-  | binding Comma binding_list { $3 @ [$1] }
-  | /* Ajout d'une règle pour gérer la liste vide */ { [] }
+  | binding Comma non_empty_binding_list { $3 @ [$1] }
 
 binding:
   | Id Colon type_ Equals expression { Binding ($1, Some $3, Some $5) }
@@ -94,7 +95,7 @@ instruction:
   | Semicolon { Empty }
   | expression Semicolon { Expression $1 }
   | LBrace body_list RBrace { Block $2 }
-  | Var binding_list { VarDeclaration $2 }
+  | Var non_empty_binding_list { VarDeclaration $2 }
   | If LPar expression RPar instruction Else instruction { If ($3, $5, Some $7) }
   | If LPar expression RPar instruction { If ($3, $5, None) }
   | While LPar expression RPar instruction { While ($3, $5) }
@@ -173,7 +174,7 @@ expression:
   | left_member Equals expression { Affectation ($1, $3) } %prec LowerThanAssign
 
 left_member:
-  | Id { IdLM $1 } %prec LPar
+  | Id { IdLM $1 }
   | expression LBracket expression RBracket { Table ($1, $3) }
   | expression Dot Id { SubElement ($1, $3) }
 
