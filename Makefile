@@ -65,4 +65,4 @@ $(OBJ_DIR)/lexer.cmo: $(LEXER_ML)
 
 # Nettoyage des fichiers générés
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.conflicts
+	rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.conflicts */parser.ml */parser.mli */lexer.ml
