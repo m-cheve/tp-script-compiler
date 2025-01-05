@@ -56,7 +56,7 @@ type type_ =
     |PrimitiveType of primType (* number, boolean ou string *)
     |ArrayT of type_ (* t[] (t = type)*)
     |Any
-    |Object of (id * type_ option) list (* {i1: t1, ..., in: tn} (t en option) (séparation : ',' ou ';'), tn en option*)
+    |ObjectT of (id * type_ option) list (* {i1: t1, ..., in: tn} (t en option) (séparation : ',' ou ';'), tn en option*)
     |Union of type_ list (* t1 | ... | tn  ( toute valeur qui possède un de ces types est aussi typable par l’union)*)
 
 type instruction =
@@ -169,7 +169,7 @@ and string_of_type = function
   | PrimitiveType pt -> "PrimitiveType(" ^ string_of_primType pt ^ ")"
   | ArrayT t -> "Array(" ^ string_of_type t ^ ")"
   | Any -> "Any"
-  | Object lst -> "Object([" ^ String.concat ", " (List.map (fun (id, t_opt) -> id ^ ": " ^ (match t_opt with Some t -> string_of_type t | None -> "None")) lst) ^ "])"
+  | ObjectT lst -> "Object([" ^ String.concat ", " (List.map (fun (id, t_opt) -> id ^ ": " ^ (match t_opt with Some t -> string_of_type t | None -> "None")) lst) ^ "])"
   | Union lst -> "Union([" ^ String.concat ", " (List.map string_of_type lst) ^ "])"
 
 and string_of_primType = function
