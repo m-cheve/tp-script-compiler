@@ -52,7 +52,7 @@ type primType=
 
 type type_ =
     |IdT of id
-    |Cte of cte (* par exemple 42 est un type dont le seul élément est 42 *)
+    |CteT of cte (* par exemple 42 est un type dont le seul élément est 42 *)
     |PrimitiveType of primType (* number, boolean ou string *)
     |ArrayT of type_ (* t[] (t = type)*)
     |Any
@@ -165,7 +165,7 @@ and string_of_instruction = function
 
 and string_of_type = function
   | IdT id -> "IdT(" ^ id ^ ")"
-  | Cte c -> "Cte(" ^ string_of_cte c ^ ")"
+  | CteT c -> "Cte(" ^ string_of_cte c ^ ")"
   | PrimitiveType pt -> "PrimitiveType(" ^ string_of_primType pt ^ ")"
   | ArrayT t -> "Array(" ^ string_of_type t ^ ")"
   | Any -> "Any"

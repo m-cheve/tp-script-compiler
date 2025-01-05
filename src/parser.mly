@@ -112,18 +112,18 @@ type_union:
 
 type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union */
   | Id { IdT $1 }
-  | Cte { Cte $1 }
+  | Cte { CteT $1 }
   | primType { PrimitiveType $1 }
   | type__ LBracket RBracket { ArrayT $1 }
   | Any { Any }
   | LBrace objectType_list RBrace { ObjectT $2 }
-  | Decimal { Cte (Decimal $1) }
-  | Binary { Cte (Binary $1) }
-  | Octal { Cte (Octal $1) }
-  | Hexa { Cte (Hexa $1) }
-  | FloatDecimal { Cte (FloatDecimal $1) }
-  | Boolean { Cte (Boolean $1) }
-  | String { Cte (String $1) }
+  | Decimal { CteT (Decimal $1) }
+  | Binary { CteT (Binary $1) }
+  | Octal { CteT (Octal $1) }
+  | Hexa { CteT (Hexa $1) }
+  | FloatDecimal { CteT (FloatDecimal $1) }
+  | Boolean { CteT (Boolean $1) }
+  | String { CteT (String $1) }
 
 objectType_list:
   | objectType { [$1] }
