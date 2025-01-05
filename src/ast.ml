@@ -80,99 +80,123 @@ and body =
 
 type file = body list
 
-let rec string_of_cte = function
-  | Decimal s -> "Decimal(" ^ s ^ ")"
-  | Binary s -> "Binary(" ^ s ^ ")"
-  | Octal s -> "Octal(" ^ s ^ ")"
-  | Hexa s -> "Hexa(" ^ s ^ ")"
-  | FloatDecimal s -> "FloatDecimal(" ^ s ^ ")"
-  | Boolean b -> "Boolean(" ^ string_of_bool b ^ ")"
-  | String s -> "String(" ^ s ^ ")"
+(* Fonction pour convertir une constante en JavaScript *)
+let rec cte_to_js c =
+  match c with
+  | Decimal s | Binary s | Octal s | Hexa s | FloatDecimal s -> s
+  | Boolean b -> string_of_bool b
+  | String s -> "\"" ^ s ^ "\""
 
-let rec string_of_expression = function
-  | Par e -> "Par(" ^ string_of_expression e ^ ")"
-  | Cte c -> "Cte(" ^ string_of_cte c ^ ")"
-  | Left lm -> "Left(" ^ string_of_left_member lm ^ ")"
-  | Object lst -> "Object(" ^ String.concat ", " (List.map (fun (id, e) -> id ^ ": " ^ string_of_expression e) lst) ^ ")"
-  | Array lst -> "Array(" ^ String.concat ", " (List.map string_of_expression lst) ^ ")"
-  | Function (e, lst) -> "Function(" ^ string_of_expression e ^ ", [" ^ String.concat ", " (List.map string_of_expression lst) ^ "])"
-  | Unaire (u, e) -> "Unaire(" ^ string_of_unaire u ^ ", " ^ string_of_expression e ^ ")"
-  | Bop (e1, b, e2) -> "Bop(" ^ string_of_expression e1 ^ ", " ^ string_of_bop b ^ ", " ^ string_of_expression e2 ^ ")"
-  | Cond (e1, c, e2) -> "Cond(" ^ string_of_expression e1 ^ ", " ^ string_of_cond c ^ ", " ^ string_of_expression e2 ^ ")"
-  | And (e1, e2) -> "And(" ^ string_of_expression e1 ^ ", " ^ string_of_expression e2 ^ ")"
-  | Or (e1, e2) -> "Or(" ^ string_of_expression e1 ^ ", " ^ string_of_expression e2 ^ ")"
-  | Affectation (lm, e) -> "Affectation(" ^ string_of_left_member lm ^ ", " ^ string_of_expression e ^ ")"
+(* Fonction pour convertir une expression en JavaScript *)
+and expression_to_js expr =
+  match expr with
+  | Par e -> "(" ^ expression_to_js e ^ ")"
+  | Cte c -> cte_to_js c
+  | Left (IdLM id) -> id
+  | Left (Table (e1, e2)) ->
+      expression_to_js e1 ^ "[" ^ expression_to_js e2 ^ "]"
+  | Left (SubElement (e, id)) ->
+      expression_to_js e ^ "." ^ id
+  | Object fields ->
+      let fields_js =
+        List.map (fun (id, e) -> id ^ ": " ^ expression_to_js e) fields
+      in
+      "{ " ^ String.concat ", " fields_js ^ " }"
+  | Array elems ->
+      let elems_js = List.map expression_to_js elems in
+      "[" ^ String.concat ", " elems_js ^ "]"
+  | Function (fn, args) ->
+      let args_js = List.map expression_to_js args in
+      expression_to_js fn ^ "(" ^ String.concat ", " args_js ^ ")"
+  | Unaire (_, e) -> expression_to_js e
+  | Bop (e1, op, e2) ->
+      let op_js = match op with
+        | Add -> "+"
+        | Sub -> "-"
+        | Mult -> "*"
+        | Div -> "/"
+        | Pow -> "**"
+      in
+      expression_to_js e1 ^ " " ^ op_js ^ " " ^ expression_to_js e2
+  | Cond (e1, cond, e2) ->
+      let cond_js = match cond with
+        | Blt -> "<"
+        | Ble -> "<="
+        | Gt -> ">"
+        | Ge -> ">="
+        | Eq -> "=="
+        | Diff -> "!="
+        | StrictEq -> "==="
+        | StrictDiff -> "!=="
+      in
+      expression_to_js e1 ^ " " ^ cond_js ^ " " ^ expression_to_js e2
+  | And (e1, e2) -> expression_to_js e1 ^ " && " ^ expression_to_js e2
+  | Or (e1, e2) -> expression_to_js e1 ^ " || " ^ expression_to_js e2
+  | Affectation (IdLM id, e) -> id ^ " = " ^ expression_to_js e
+  | _ -> ""
 
-and string_of_left_member = function
-  | IdLM id -> "IdLM(" ^ id ^ ")"
-  | Table (e1, e2) -> "Table(" ^ string_of_expression e1 ^ ", " ^ string_of_expression e2 ^ ")"
-  | SubElement (e, id) -> "SubElement(" ^ string_of_expression e ^ ", " ^ id ^ ")"
+(* Fonction pour convertir une instruction en JavaScript *)
+and instruction_to_js instr =
+  match instr with
+  | Empty -> ";"
+  | Expression e -> expression_to_js e ^ ";"
+  | Block body ->
+      let body_js = List.map body_to_js body in
+      "{\n" ^ String.concat "\n" body_js ^ "\n}"
+  | VarDeclaration bindings ->
+      let bindings_js =
+        List.map
+          (fun (Binding (id, _, e_opt)) ->
+             id ^ (match e_opt with Some e -> " = " ^ expression_to_js e | None -> ""))
+          bindings
+      in
+      "var " ^ String.concat ", " bindings_js ^ ";"
+  | If (cond, i1, i2_opt) ->
+      "if (" ^ expression_to_js cond ^ ") " ^ instruction_to_js i1 ^
+      (match i2_opt with Some i2 -> " else " ^ instruction_to_js i2 | None -> "")
+  | While (cond, i) ->
+      "while (" ^ expression_to_js cond ^ ") " ^ instruction_to_js i
+  | Return e_opt ->
+      "return" ^
+      (match e_opt with Some e -> " " ^ expression_to_js e | None -> "") ^ ";"
 
-and string_of_unaire = function
-  | UTypeof -> "UTypeof"
-  | Plus -> "Plus"
-  | Minus -> "Minus"
+(* Fonction pour convertir une déclaration en JavaScript *)
+and declaration_to_js decl =
+  match decl with
+  | Alias _ -> ""  (* Ignorer les alias *)
+  | LocalLet bindings ->
+      let bindings_js =
+        List.map
+          (fun (Binding (id, _, e_opt)) ->
+             "let " ^ id ^
+             (match e_opt with Some e -> " = " ^ expression_to_js e | None -> ""))
+          bindings
+      in
+      String.concat ";\n" bindings_js ^ ";"
+  | LocalConst bindings ->
+      let bindings_js =
+        List.map
+          (fun (Binding (id, _, e_opt)) ->
+             "const " ^ id ^
+             (match e_opt with Some e -> " = " ^ expression_to_js e | None -> ""))
+          bindings
+      in
+      String.concat ";\n" bindings_js ^ ";"
+  | Function (id, bindings, _, body) ->
+      let args_js =
+        String.concat ", " (List.map (fun (Binding (id, _, _)) -> id) bindings)
+      in
+      let body_js = List.map body_to_js body in
+      "function " ^ id ^ "(" ^ args_js ^ ") {\n" ^
+      String.concat "\n" body_js ^ "\n}"
 
-and string_of_bop = function
-  | Pow -> "Pow"
-  | Mult -> "Mult"
-  | Div -> "Div"
-  | Add -> "Add"
-  | Sub -> "Sub"
+(* Fonction pour convertir un corps en JavaScript *)
+and body_to_js body =
+  match body with
+  | Declaration decl -> declaration_to_js decl
+  | Instr instr -> instruction_to_js instr
 
-and string_of_cond = function
-  | Blt -> "Blt"
-  | Ble -> "Ble"
-  | Gt -> "Gt"
-  | Ge -> "Ge"
-  | Eq -> "Eq"
-  | Diff -> "Diff"
-  | StrictEq -> "StrictEq"
-  | StrictDiff -> "StrictDiff"
-
-let rec string_of_file file =
-  String.concat "\n" (List.map string_of_body file)
-
-and string_of_body = function
-  | Declaration d -> "Declaration(" ^ string_of_declaration d ^ ")"
-  | Instr i -> "Instr(" ^ string_of_instruction i ^ ")"
-
-and string_of_declaration = function
-  | Alias (id, t) -> "Alias(" ^ id ^ ", " ^ string_of_type t ^ ")"
-  | LocalLet lst -> "LocalLet(" ^ String.concat ", " (List.map string_of_binding lst) ^ ")"
-  | LocalConst lst -> "LocalConst(" ^ String.concat ", " (List.map string_of_binding lst) ^ ")"
-  | Function (id, lst, t_opt, body_lst) ->
-      "Function(" ^ id ^ ", [" ^ String.concat ", " (List.map string_of_binding lst) ^ "], " ^
-      (match t_opt with Some t -> string_of_type t | None -> "None") ^ ", [" ^
-      String.concat ", " (List.map string_of_body body_lst) ^ "])"
-
-and string_of_binding = function
-  | Binding (id, t_opt, e_opt) ->
-      "Binding(" ^ id ^ ", " ^
-      (match t_opt with Some t -> string_of_type t | None -> "None") ^ ", " ^
-      (match e_opt with Some e -> string_of_expression e | None -> "None") ^ ")"
-
-and string_of_instruction = function
-  | Empty -> "Empty"
-  | Expression e -> "Expression(" ^ string_of_expression e ^ ")"
-  | Block lst -> "Block([" ^ String.concat ", " (List.map string_of_body lst) ^ "])"
-  | VarDeclaration lst -> "VarDeclaration([" ^ String.concat ", " (List.map string_of_binding lst) ^ "])"
-  | If (e, i1, i2_opt) ->
-      "If(" ^ string_of_expression e ^ ", " ^ string_of_instruction i1 ^ ", " ^
-      (match i2_opt with Some i2 -> string_of_instruction i2 | None -> "None") ^ ")"
-  | While (e, i) -> "While(" ^ string_of_expression e ^ ", " ^ string_of_instruction i ^ ")"
-  | Return e_opt -> "Return(" ^ (match e_opt with Some e -> string_of_expression e | None -> "None") ^ ")"
-
-and string_of_type = function
-  | IdT id -> "IdT(" ^ id ^ ")"
-  | CteT c -> "Cte(" ^ string_of_cte c ^ ")"
-  | PrimitiveType pt -> "PrimitiveType(" ^ string_of_primType pt ^ ")"
-  | ArrayT t -> "Array(" ^ string_of_type t ^ ")"
-  | Any -> "Any"
-  | ObjectT lst -> "Object([" ^ String.concat ", " (List.map (fun (id, t_opt) -> id ^ ": " ^ (match t_opt with Some t -> string_of_type t | None -> "None")) lst) ^ "])"
-  | Union lst -> "Union([" ^ String.concat ", " (List.map string_of_type lst) ^ "])"
-
-and string_of_primType = function
-  | Number -> "Number"
-  | Boolean -> "Boolean"
-  | String -> "String"
+(* Fonction principale pour afficher un fichier en JavaScript *)
+let ast_to_js file =
+  let js_code = List.map body_to_js file in
+  String.concat "\n" js_code

@@ -3,6 +3,7 @@ open Parser
 open Ast
 open Lexer
 
+(* ----------------------- Question 2, parse le fichier pour créer un AST ----------------------- *)
 let parse_file filename =
   let in_channel = open_in filename in
   let lexbuf = Lexing.from_channel in_channel in
@@ -337,7 +338,9 @@ let () =
   else
     let filename = Sys.argv.(1) in
     let ast = parse_file filename in
-    check_scope ast; (* Non fonctionnelle *)
-    check_type ast; (* Non fonctionnelle *)
+    (*check_scope ast;*) (* Non fonctionnelle *)
+    (*check_type ast;*) (* Non fonctionnelle *)
     (* Afficher l'AST *)
-    Printf.printf "%s\n" (Ast.string_of_file ast)
+    print_endline (ast_to_js ast)
+    (* Afficher le code JavaScript *)
+    (*Printf.printf "%s\n" (Ast.string_of_file ast)*)
