@@ -26,8 +26,8 @@
 %left Mult Div Plus Minus
 %right Pow
 %right LPar
-%left Dot LBracket
-%left Pipe
+%left Dot
+%nonassoc LBracket Pipe
 
 %nonassoc RPar
 %nonassoc Else
@@ -114,7 +114,7 @@ type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union
   | Id { IdT $1 }
   | Cte { Cte $1 }
   | primType { PrimitiveType $1 }
-  | type__ LBracket RBracket { Array $1 }
+  | type__ LBracket RBracket { ArrayT $1 }
   | Any { Any }
   | LBrace objectType_list RBrace { Object $2 }
   | Decimal { Cte (Decimal $1) }

@@ -54,7 +54,7 @@ type type_ =
     |IdT of id
     |Cte of cte (* par exemple 42 est un type dont le seul élément est 42 *)
     |PrimitiveType of primType (* number, boolean ou string *)
-    |Array of type_ (* t[] (t = type)*)
+    |ArrayT of type_ (* t[] (t = type)*)
     |Any (* TODO : voir comment fonctionne Any *)
     |Object of (id * type_ option) list (* {i1: t1, ..., in: tn} (t en option) (séparation : ',' ou ';'), tn en option*)
     |Union of type_ list (* t1 | ... | tn  ( toute valeur qui possède un de ces types est aussi typable par l’union)*)
@@ -167,7 +167,7 @@ and string_of_type = function
   | IdT id -> "IdT(" ^ id ^ ")"
   | Cte c -> "Cte(" ^ string_of_cte c ^ ")"
   | PrimitiveType pt -> "PrimitiveType(" ^ string_of_primType pt ^ ")"
-  | Array t -> "Array(" ^ string_of_type t ^ ")"
+  | ArrayT t -> "Array(" ^ string_of_type t ^ ")"
   | Any -> "Any"
   | Object lst -> "Object([" ^ String.concat ", " (List.map (fun (id, t_opt) -> id ^ ": " ^ (match t_opt with Some t -> string_of_type t | None -> "None")) lst) ^ "])"
   | Union lst -> "Union([" ^ String.concat ", " (List.map string_of_type lst) ^ "])"
