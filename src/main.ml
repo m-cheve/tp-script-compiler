@@ -166,12 +166,178 @@ let check_scope (ast: file) =
   exit_scope ();
   Printf.printf "Scope checking terminé sans erreurs.\n"
 
+(* ----------------------- Question 4, check_types ----------------------- *)
+exception TypeError of string
+
+(* Environnement pour stocker les types des variables et fonctions *)
+module Env = Map.Make(String)
+
+(* Définition de l'environnement *)
+type env = {
+  variables : type_ Env.t; (* Types des variables *)
+  return_type : type_ option; (* Type de retour de la fonction courante *)
+}
+
+(* Fonction utilitaire pour vérifier le sous-typage *)
+let rec is_subtype t1 t2 =
+  match (t1, t2) with
+  | (_, Any) -> true (* Tout type est un sous-type de Any *)
+  | (CteT (Decimal _), PrimitiveType Number)
+  | (CteT (Binary _), PrimitiveType Number)
+  | (CteT (Octal _), PrimitiveType Number)
+  | (CteT (Hexa _), PrimitiveType Number)
+  | (CteT (FloatDecimal _), PrimitiveType Number) -> true (* Les constantes numériques sont des sous-types de Number *)
+  | (CteT (Boolean _), PrimitiveType Boolean) -> true  (* Les constantes booléennes sont des sous-types de Boolean *)
+  | (CteT (String _), PrimitiveType String) -> true (* Les constantes chaînes sont des sous-types de String *)
+  | (CteT c1, CteT c2) -> c1 = c2 (* Les constantes doivent être identiques *)
+  | (PrimitiveType t1, PrimitiveType t2) -> t1 = t2 (* Les types primitifs doivent correspondre *)
+  | (Union types, _) -> List.exists (fun t -> is_subtype t t2) types (* Un élément d'une union peut être un sous-type *)
+  | (_, Union types) -> List.for_all (fun t -> is_subtype t1 t) types (* Tout élément doit être un sous-type *)
+  | _ -> false
+
+(* Vérification du typage des expressions *)
+let rec check_expression env expr =
+  match expr with
+  | Par e -> check_expression env e  (* Vérification du type de l'expression entre parenthèses *)
+  | Cte c -> (match c with
+      | Decimal _ | Binary _ | Octal _ | Hexa _ | FloatDecimal _ -> PrimitiveType Number  (* Les constantes numériques sont de type Number *)
+      | Boolean _ -> PrimitiveType Boolean (* Les constantes booléennes sont de type Boolean *)
+      | String _ -> PrimitiveType String) (* Les constantes chaînes sont de type String *)
+  | Left (IdLM id) -> (try Env.find id env.variables with Not_found -> raise (TypeError ("Variable non déclarée : " ^ id)))  (* Vérification d'une variable *)
+  | Left (Table (e1, e2)) ->
+      let t1 = check_expression env e1 in
+      let t2 = check_expression env e2 in
+      (match t1 with
+       | ArrayT t -> if is_subtype t2 (PrimitiveType Number) then t else raise (TypeError "Index invalide")  (* Vérification d'un index valide *)
+       | _ -> raise (TypeError "Accès à un type non tableau"))
+  | Left (SubElement (e, id)) ->
+      let t = check_expression env e in
+      (match t with
+       | ObjectT fields -> (try List.assoc id fields |> Option.get with Not_found -> raise (TypeError ("Champ non trouvé : " ^ id)))  (* Vérification d'un champ d'objet *)
+       | Union types ->
+          let field_types =
+            List.filter_map
+              (fun t -> match t with ObjectT fields -> List.assoc_opt id fields | _ -> None)
+              types
+          in
+          if field_types = [] then raise (TypeError ("Champ non trouvé dans l'union : " ^ id))
+          else Union (List.map Option.get field_types)  (* Union des types de champs *)
+       | _ -> raise (TypeError ("Accès invalide au champ : " ^ id)))
+  | Object fields -> ObjectT (List.map (fun (id, e) -> (id, Some (check_expression env e))) fields)  (* Vérification de la déclaration d'un objet *)
+  | Array elems -> ArrayT (if elems = [] then Any else check_expression env (List.hd elems))  (* Vérification d'un tableau *)
+  | Function (fn, args) ->
+      let _ = check_expression env fn in (* Vérification de la fonction *)
+      List.iter (fun arg -> ignore (check_expression env arg)) args;  (* Vérification des arguments *)
+      Any (* Les fonctions renvoient Any par défaut *)
+  | Unaire (_, e) -> check_expression env e (* Vérification d'une opération unaire *)
+  | Bop (e1, op, e2) ->
+      let t1 = check_expression env e1 in
+      let t2 = check_expression env e2 in
+      (match op with
+       | Add ->
+           if is_subtype t1 (PrimitiveType Number) && is_subtype t2 (PrimitiveType Number) then PrimitiveType Number  (* Addition numérique *)
+           else if is_subtype t1 (PrimitiveType String) && is_subtype t2 (PrimitiveType String) then PrimitiveType String  (* Concatenation de chaînes *)
+           else raise (TypeError "Opération '+' invalide")
+       | _ ->
+           if is_subtype t1 (PrimitiveType Number) && is_subtype t2 (PrimitiveType Number) then PrimitiveType Number  (* Autres opérations binaires numériques *)
+           else raise (TypeError "Opération binaire invalide"))
+  | Cond (e1, _, e2) ->
+      let t1 = check_expression env e1 in
+      let t2 = check_expression env e2 in
+      if is_subtype t1 t2 || is_subtype t2 t1 then PrimitiveType Boolean  (* Vérification d'une condition *)
+      else raise (TypeError "Condition invalide")
+  | And (e1, e2) | Or (e1, e2) ->
+      let _ = check_expression env e1 in
+      let _ = check_expression env e2 in
+      PrimitiveType Boolean (* Opérateurs logiques *)
+  | Affectation (IdLM id, e) ->
+      let t_var = (try Env.find id env.variables with Not_found -> Any) in
+      let t_expr = check_expression env e in
+      if is_subtype t_expr t_var then t_expr (* Vérification de l'affectation *)
+      else raise (TypeError ("Incompatibilité de type pour " ^ id))
+  | _ -> Any (* Par défaut, le type est Any *)
+
+(* Vérification des instructions *)
+let rec check_instruction env instr =
+  match instr with
+  | Empty -> env  (* Instruction vide *)
+  | Expression e -> ignore (check_expression env e); env (* Ignorer le type d'une expression *)
+  | Block body -> List.fold_left check_body env body (* Vérification d'un bloc *)
+  | VarDeclaration bindings ->
+      List.fold_left
+        (fun env (Binding (id, t_opt, e_opt)) ->
+           let t = match (t_opt, e_opt) with
+             | Some t, Some e ->
+                 let t_expr = check_expression env e in
+                 if is_subtype t_expr t then t else raise (TypeError ("Incompatibilité de type pour " ^ id))
+             | Some t, None -> t
+             | None, Some e -> check_expression env e
+             | None, None -> Any
+           in
+           { env with variables = Env.add id t env.variables })
+        env bindings (* Ajout des variables à l'environnement *)
+  | If (cond, i1, i2_opt) ->
+      let _ = check_expression env cond in (* Vérification de la condition *)
+      let env' = check_instruction env i1 in (* Vérification de l'instruction if *)
+      (match i2_opt with Some i2 -> check_instruction env' i2 | None -> env')  (* Vérification de else *)
+  | While (cond, i) -> let _ = check_expression env cond in check_instruction env i  (* Boucle While *)
+  | Return e_opt ->
+      (match (env.return_type, e_opt) with
+       | Some t_ret, Some e ->
+           let t_e = check_expression env e in
+           if is_subtype t_e t_ret then env  (* Vérification du type de retour *)
+           else raise (TypeError "Incompatibilité de type pour return")
+       | Some Any, None -> env  (* Retour sans expression pour Any *)
+       | None, _ -> raise (TypeError "Return en dehors d'une fonction")
+       | _ -> env)
+
+(* Vérification des déclarations et corps *)
+and check_declaration env decl =
+  match decl with
+  | Alias (id, t) -> { env with variables = Env.add id t env.variables }  (* Alias de type *)
+  | LocalLet bindings | LocalConst bindings ->
+      List.fold_left
+        (fun env (Binding (id, t_opt, e_opt)) ->
+           let t = match (t_opt, e_opt) with
+             | Some t, Some e ->
+                 let t_expr = check_expression env e in
+                 if is_subtype t_expr t then t else raise (TypeError ("Incompatibilité de type pour " ^ id))
+             | Some t, None -> t
+             | None, Some e -> check_expression env e
+             | None, None -> Any
+           in
+           { env with variables = Env.add id t env.variables })
+        env bindings (* Ajout des constantes ou variables locales à l'environnement *)
+  | Function (id, bindings, ret_type, body) ->
+      let env' =
+        List.fold_left
+          (fun env (Binding (id, t_opt, _)) ->
+             let t = match t_opt with None -> Any | Some t -> t in
+             { env with variables = Env.add id t env.variables })
+          { env with return_type = (match ret_type with None -> Some Any | Some t -> Some t) }
+          bindings
+      in
+      let _ = List.fold_left check_body env' body in (* Vérification du corps de la fonction *)
+      env
+
+and check_body env body =
+  match body with
+  | Declaration decl -> check_declaration env decl  (* Vérification d'une déclaration *)
+  | Instr instr -> check_instruction env instr  (* Vérification d'une instruction *)
+
+(* Vérification d'un fichier *)
+let check_type file =
+  let initial_env = { variables = Env.empty; return_type = None } in
+  let _ = List.fold_left check_body initial_env file in (* Vérification de chaque élément du fichier *)
+  Printf.printf "Type checking terminé sans erreurs.\n"
+
 let () =
   if Array.length Sys.argv <> 2 then
     Printf.eprintf "Usage: %s <file>\n" Sys.argv.(0)
   else
     let filename = Sys.argv.(1) in
     let ast = parse_file filename in
-    check_scope ast;
+    check_scope ast; (* Non fonctionnelle *)
+    check_type ast; (* Non fonctionnelle *)
     (* Afficher l'AST *)
     Printf.printf "%s\n" (Ast.string_of_file ast)
