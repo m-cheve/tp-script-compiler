@@ -78,40 +78,44 @@ let check_scope (ast: file) =
 
   (* Vérification d'une déclaration *)
   and check_declaration = function
-    | Alias (_, _) -> ()  (* Pas d'impact sur les identifiants *)
-    | LocalLet bindings ->
+  | Alias (_, _) -> ()  (* Pas d'impact sur les identifiants *)
+  | LocalLet bindings ->
       List.iter (fun (Binding (id, _, _)) -> add_variable id false) bindings
-    | LocalConst bindings ->
+  | LocalConst bindings ->
       List.iter (fun (Binding (id, _, _)) -> add_variable id true) bindings
-    | Function (id, bindings, _, body_list) ->
+  | Function (id, bindings, _, body_list) ->
+      (* Ajouter la fonction elle-même à la portée avant de traiter ses paramètres et son corps *)
+      add_variable id false;  (* La fonction elle-même *)
       (* Entrer dans une nouvelle portée pour la fonction *)
       enter_scope ();
-      add_variable id false;  (* La fonction elle-même *)
-      List.iter (fun (Binding (id, _, _)) -> add_variable id false) bindings;
-      List.iter check_body body_list;
-      exit_scope ()
+      List.iter (fun (Binding (id, _, _)) -> add_variable id false) bindings;  (* Ajouter les paramètres de la fonction *)
+      List.iter check_body body_list;  (* Vérifier le corps de la fonction *)
+      exit_scope ()  (* Sortir de la portée de la fonction *)
+
 
   (* Vérification d'une instruction *)
   and check_instruction = function
-    | Empty -> ()
-    | Expression expr -> check_expression expr
-    | Block body_list ->
-      enter_scope ();
-      List.iter check_body body_list;
-      exit_scope ()
-    | VarDeclaration bindings ->
-      List.iter (fun (Binding (id, _, expr_opt)) ->
-        add_variable id false;
-        Option.iter check_expression expr_opt
-      ) bindings
-    | If (cond, if_instr, else_instr_opt) ->
-      check_expression cond;
-      check_instruction if_instr;
-      Option.iter check_instruction else_instr_opt
-    | While (cond, instr) ->
-      check_expression cond;
-      check_instruction instr
-    | Return expr_opt -> Option.iter check_expression expr_opt
+  | Empty -> ()
+  | Expression expr -> check_expression expr
+  | Block body_list ->
+    enter_scope ();
+    List.iter check_body body_list;
+    exit_scope ()
+  | VarDeclaration bindings ->
+    (* Ajouter immédiatement les variables à la portée pour var *)
+    List.iter (fun (Binding (id, _, expr_opt)) ->
+      add_variable id false;  (* Ajout immédiat pour var *)
+      Option.iter check_expression expr_opt
+    ) bindings
+  | If (cond, if_instr, else_instr_opt) ->
+    check_expression cond;
+    check_instruction if_instr;
+    Option.iter check_instruction else_instr_opt
+  | While (cond, instr) ->
+    check_expression cond;
+    check_instruction instr
+  | Return expr_opt -> Option.iter check_expression expr_opt
+
 
   (* Vérification d'une expression *)
   and check_expression = function
