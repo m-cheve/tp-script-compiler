@@ -338,9 +338,6 @@ let () =
   else
     let filename = Sys.argv.(1) in
     let ast = parse_file filename in
-    (*check_scope ast;*) (* Non fonctionnelle *)
+    check_scope ast; (* Non fonctionnelle pour les variables déclarées avec 'var' *)
     (*check_type ast;*) (* Non fonctionnelle *)
-    (* Afficher l'AST *)
     print_endline (ast_to_js ast)
-    (* Afficher le code JavaScript *)
-    (*Printf.printf "%s\n" (Ast.string_of_file ast)*)
