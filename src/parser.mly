@@ -64,7 +64,7 @@ file:
 
 body_list:
   | body body_list { [$1] @ $2 }
-  | /* Cas vide */ { [] }
+  | /* Empty case */ { [] }
 
 body:
   | declaration { Declaration $1 }
@@ -79,7 +79,7 @@ declaration:
 
 binding_list:
   | non_empty_binding_list { $1 }
-  | /* Cas vide */ { [] }
+  | /* Empty case */ { [] }
 
 non_empty_binding_list:
   | binding { [$1] }
@@ -110,7 +110,7 @@ type_union:
   | type__ Pipe type_union { $1::$3 }
   | type__ Pipe type__ { $1::[$3] }
 
-type__: /* Utilisé pour résoudre le problème de grammaire cyclique avec Union */
+type__: /* Used to solve the cyclic grammar issue with Union */
   | Id { IdT $1 }
   | Cte { CteT $1 }
   | primType { PrimitiveType $1 }
@@ -129,7 +129,7 @@ objectType_list:
   | objectType { [$1] }
   | objectType Semicolon objectType_list { $3 @ [$1] }
   | objectType Comma objectType_list { $3 @ [$1] }
-  | /* Ajout d'une règle pour gérer la liste vide */ { [] }
+  | /* Rule to handle the empty list */ { [] }
 
 objectType:
   | Id Colon type_ { ($1, Some $3) }

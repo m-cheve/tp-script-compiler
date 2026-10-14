@@ -5,10 +5,10 @@
 }
 
 rule token = parse
-  | [' ' '\t' '\n' '\r'] { token lexbuf }  (* Ignorer les espaces blancs *)
-  | "//"  [^ '\n']* eof { token lexbuf }  (* Commentaires ligne en fin de fichier *)
-  | "//" [^ '\n']* '\n' { token lexbuf }  (* Commentaires ligne *)
-  | "/*" { comment lexbuf }  (* Commentaires bloc *)
+  | [' ' '\t' '\n' '\r'] { token lexbuf }  (* Ignore whitespace *)
+  | "//"  [^ '\n']* eof { token lexbuf }  (* Line comments at end of file *)
+  | "//" [^ '\n']* '\n' { token lexbuf }  (* Line comments *)
+  | "/*" { comment lexbuf }  (* Block comments *)
   | ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as id {
       match id with
       | "function" -> FunctionToken
@@ -46,8 +46,8 @@ rule token = parse
   | ('0' | (['1'-'9']+ (['_'] ['0'-'9'] | ['0'-'9'])*)) ['e' 'E'] ['+' '-']? ['0'-'9']+ (['_'] ['0'-'9'] | ['0'-'9'])* as num {
       FloatDecimal num
     }
-  | "\"" { String (double_quote_string "" lexbuf) }  (* Début d'une chaîne de caractères, on commence avec une chaîne vide *)
-  | "'" { String (single_quote_string "" lexbuf) }  (* Début d'une chaîne de caractères, on commence avec une chaîne vide *)
+  | "\"" { String (double_quote_string "" lexbuf) }  (* Start of a string literal, starting with an empty string *)
+  | "'" { String (single_quote_string "" lexbuf) }  (* Start of a string literal, starting with an empty string *)
   | "==" { Eq }
   | "!=" { Diff }
   | "===" { StrictEq }
@@ -79,21 +79,21 @@ rule token = parse
   | _ as c { raise (LexerError (Printf.sprintf "Unexpected character: %c" c)) }
 
 and comment = parse
-  | "*/" { token lexbuf }  (* Fin du commentaire *)
-  | _ { comment lexbuf }   (* Continuer à consommer *)
+  | "*/" { token lexbuf }  (* End of comment *)
+  | _ { comment lexbuf }   (* Continue consuming *)
   | eof { raise (LexerError "Unclosed comment") }
 
 and double_quote_string acc = parse
-  | "\"" { acc }  (* Fin de la chaîne de caractères, retourne l'accumulateur *)
-  | "\\\"" as c { double_quote_string (acc ^ c) lexbuf }  (* Ajoute les guillemets et continue à accumuler *)
-  | _ as c { double_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumule les caractères autres que les guillemets *)
-  | eof { raise (LexerError "Unclosed string") }  (* Si la chaîne n'est pas fermée avant la fin du fichier *)
+  | "\"" { acc }  (* End of string literal, return accumulator *)
+  | "\\\"" as c { double_quote_string (acc ^ c) lexbuf }  (* Add escaped quote and continue accumulating *)
+  | _ as c { double_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumulate characters other than quotes *)
+  | eof { raise (LexerError "Unclosed string") }  (* If the string is not closed before end of file *)
 
 and single_quote_string acc = parse
-  | "'" { acc }  (* Fin de la chaîne, retourne l'accumulateur *)
-  | "\\'" as c { single_quote_string (acc ^ c) lexbuf }  (* Ajoute l'apostrophe et continue à accumuler *)
-  | _ as c { single_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumule les caractères valides *)
-  | eof { raise (LexerError "Unclosed single-quoted string") }  (* Si la chaîne n'est pas fermée avant la fin du fichier *)
+  | "'" { acc }  (* End of string, return accumulator *)
+  | "\\'" as c { single_quote_string (acc ^ c) lexbuf }  (* Add apostrophe and continue accumulating *)
+  | _ as c { single_quote_string (acc ^ (String.make 1 c)) lexbuf }  (* Accumulate valid characters *)
+  | eof { raise (LexerError "Unclosed single-quoted string") }  (* If the string is not closed before end of file *)
 
 {
   let from_channel = Lexing.from_channel

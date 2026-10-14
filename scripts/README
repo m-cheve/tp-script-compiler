@@ -1,4 +1,4 @@
-Les fichiers dans OK doivent passer.
+Files in OK should pass.
 
-Les fichiers dans KO doivent donner une erreur
-(de syntaxe, de portée ou de type).
+Files in KO should return an error
+(syntax, scope or type).

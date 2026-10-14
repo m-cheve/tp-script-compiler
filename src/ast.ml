@@ -52,42 +52,42 @@ type primType=
 
 type type_ =
     |IdT of id
-    |CteT of cte (* par exemple 42 est un type dont le seul élément est 42 *)
-    |PrimitiveType of primType (* number, boolean ou string *)
+    |CteT of cte (* for example 42 is a type whose only element is 42 *)
+    |PrimitiveType of primType (* number, boolean or string *)
     |ArrayT of type_ (* t[] (t = type)*)
     |Any
-    |ObjectT of (id * type_ option) list (* {i1: t1, ..., in: tn} (t en option) (séparation : ',' ou ';'), tn en option*)
-    |Union of type_ list (* t1 | ... | tn  ( toute valeur qui possède un de ces types est aussi typable par l’union)*)
+    |ObjectT of (id * type_ option) list (* {i1: t1, ..., in: tn} (t optional) (separator: ',' or ';'), tn optional *)
+    |Union of type_ list (* t1 | ... | tn (any value having one of these types is also typeable by the union) *)
 
 type instruction =
     |Empty (* ; *)
     |Expression of expression (* e; *)
-    |Block of body list (* {b1 ... bn} (bi = instruction ou déclaration)*)
-    |VarDeclaration of binding list (* var bs (bs = i1 t01 e01, i2 t02 e02, ..., in t0n e0n)*)
-    |If of expression * instruction * instruction option (* if (e) i1 else i2 (la partie else i2 est optionnelle ; si elle est présente, elle se rapporte au if le plus proche)*)
+    |Block of body list (* {b1 ... bn} (bi = instruction or declaration) *)
+    |VarDeclaration of binding list (* var bs (bs = i1 t01 e01, i2 t02 e02, ..., in t0n e0n) *)
+    |If of expression * instruction * instruction option (* if (e) i1 else i2 (the else i2 part is optional; if present, it associates with the closest if) *)
     |While of expression * instruction (* while (e) i *)
-    |Return of expression option (* return; ou return e; *)
+    |Return of expression option (* return; or return e; *)
 and binding =
-    |Binding of id * type_ option * expression option (* i t0 e0 (t0 = ': type_' ou 'vide') (e0 = '= expression' ou 'vide')*)
+    |Binding of id * type_ option * expression option (* i t0 e0 (t0 = ': type_' or 'empty') (e0 = '= expression' or 'empty') *)
 and declaration =
     |Alias of id * type_ (* type i = t *)
     |LocalLet of binding list (* let bs; *)
     |LocalConst of binding list (* const bs; *)
-    |Function of id * binding list * type_ option * body list (* i ( as ) t0 { dis } (si t0 n'est pas vide = ': t')*)
+    |Function of id * binding list * type_ option * body list (* i ( as ) t0 { dis } (if t0 is not empty = ': t') *)
 and body =
     |Declaration of declaration
     |Instr of instruction
 
 type file = body list
 
-(* Fonction pour convertir une constante en JavaScript *)
+(* Function to convert a constant to JavaScript *)
 let rec cte_to_js c =
   match c with
   | Decimal s | Binary s | Octal s | Hexa s | FloatDecimal s -> s
   | Boolean b -> string_of_bool b
   | String s -> "\"" ^ s ^ "\""
 
-(* Fonction pour convertir une expression en JavaScript *)
+(* Function to convert an expression to JavaScript *)
 and expression_to_js expr =
   match expr with
   | Par e -> "(" ^ expression_to_js e ^ ")"
@@ -135,7 +135,7 @@ and expression_to_js expr =
   | Affectation (IdLM id, e) -> id ^ " = " ^ expression_to_js e
   | _ -> ""
 
-(* Fonction pour convertir une instruction en JavaScript *)
+(* Function to convert an instruction to JavaScript *)
 and instruction_to_js instr =
   match instr with
   | Empty -> ";"
@@ -160,10 +160,10 @@ and instruction_to_js instr =
       "return" ^
       (match e_opt with Some e -> " " ^ expression_to_js e | None -> "") ^ ";"
 
-(* Fonction pour convertir une déclaration en JavaScript *)
+(* Function to convert a declaration to JavaScript *)
 and declaration_to_js decl =
   match decl with
-  | Alias _ -> ""  (* Ignorer les alias *)
+  | Alias _ -> ""  (* Ignore aliases *)
   | LocalLet bindings ->
       let bindings_js =
         List.map
@@ -190,13 +190,13 @@ and declaration_to_js decl =
       "function " ^ id ^ "(" ^ args_js ^ ") {\n" ^
       String.concat "\n" body_js ^ "\n}"
 
-(* Fonction pour convertir un corps en JavaScript *)
+(* Function to convert a body to JavaScript *)
 and body_to_js body =
   match body with
   | Declaration decl -> declaration_to_js decl
   | Instr instr -> instruction_to_js instr
 
-(* Fonction principale pour afficher un fichier en JavaScript *)
+(* Main function to output a file in JavaScript *)
 let ast_to_js file =
   let js_code = List.map body_to_js file in
   String.concat "\n" js_code
